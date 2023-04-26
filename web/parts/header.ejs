@@ -258,19 +258,6 @@
         <!-- Header -->
         <% if (isWebInterface) { %>
             <header class="c-header c-header-light c-header-fixed c-header-with-subheader">
-                <!-- Zap Hosting Ad - Desktop -->
-                <% if (dynamicAd) { %>
-                    <a class="zapAdContainer d-md-down-none" href="<%= dynamicAd.linkDesktop %>" target="_blank" rel="noopener noreferrer">
-                        <img class="zapLogo show-dark-mode" alt="zap hosting" src="<%= dynamicAd.logoDarkMode %>">
-                        <img class="zapLogo show-light-mode" alt="zap hosting" src="<%= dynamicAd.logoLightMode %>">
-                        <div class="zapText attentionText">
-                            <%- dynamicAd.text %>
-                            <svg class="c-icon zapTextIcon">
-                                <use href="img/coreui_icons.svg#cil-external-link"></use>
-                            </svg>
-                        </div>
-                    </a>
-                <% } %>
 
                 <button class="c-header-toggler c-class-toggler d-lg-none mfe-auto" type="button" data-target="#sidebar"
                     data-class="c-sidebar-show">

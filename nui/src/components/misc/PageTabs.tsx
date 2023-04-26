@@ -32,9 +32,9 @@ export const PageTabs: React.FC = () => {
         textColor="secondary"
         onChange={(_, newVal) => setPage(newVal)}
       >
-        <StyledTab label="Main" wrapped disableFocusRipple />
-        <StyledTab label="Players" wrapped disableFocusRipple />
-        <StyledTab label="txAdmin" wrapped disableFocusRipple />
+        <StyledTab label="Menü" wrapped disableFocusRipple />
+        <StyledTab label="Spieler" wrapped disableFocusRipple />
+        <StyledTab label="USGAdmin" wrapped disableFocusRipple />
       </Tabs>
     </Box>
   );
