@@ -7,9 +7,7 @@ const console = consoleFactory(modulename);
 
 
 //Helpers
-const now = () => {
-  return Math.round(Date.now() / 1000);
-};
+const now = () => { return Math.round(Date.now() / 1000); };
 
 /*
     TODO:
@@ -32,13 +30,13 @@ const now = () => {
 */
 
 export default async () => {
-  let apiResponse;
-  try {
-    //perform request - cache busting every ~1.4h
-    const osTypeApiUrl = txEnv.isWindows ? "win32" : "linux";
-    const cacheBuster = Math.floor(now() / 5e3);
-    const reqUrl = `https://changelogs-live.fivem.net/api/changelog/versions/${osTypeApiUrl}/server?${cacheBuster}`;
-    apiResponse = await got.get(reqUrl).json();
+    let apiResponse;
+    try {
+        //perform request - cache busting every ~1.4h
+        const osTypeApiUrl = (txEnv.isWindows) ? 'win32' : 'linux';
+        const cacheBuster = Math.floor(now() / 5e3);
+        const reqUrl = `https://changelogs-live.fivem.net/api/changelog/versions/${osTypeApiUrl}/server?${cacheBuster}`;
+        apiResponse = await got.get(reqUrl).json();
 
         //validate response
         if (!apiResponse) throw new Error('request failed');
@@ -65,15 +63,6 @@ export default async () => {
         if (globals.databus.updateChecker === null) globals.databus.updateChecker = false;
         return;
     }
-  } catch (error) {
-    if (verbose)
-      logWarn(
-        `Failed to retrieve FXServer/txAdmin update data with error: ${error.message}`
-      );
-    if (globals.databus.updateChecker === null)
-      globals.databus.updateChecker = false;
-    return;
-  }
 
     //Checking txAdmin version
     let txOutput = false;
@@ -106,12 +95,6 @@ export default async () => {
         console.verbose.warn('Error checking for txAdmin updates. Enable verbosity for more information.');
         console.verbose.dir(error);
     }
-  } catch (error) {
-    logWarn(
-      "Error checking for txAdmin updates. Enable verbosity for more information."
-    );
-    if (verbose) dir(error);
-  }
 
     //Checking FXServer version
     //FIXME: logic copied from dashboard webroute, adapt to new thing
@@ -148,16 +131,10 @@ export default async () => {
         console.warn('Error checking for FXServer updates. Enable verbosity for more information.');
         console.verbose.dir(error);
     }
-  } catch (error) {
-    logWarn(
-      "Error checking for FXServer updates. Enable verbosity for more information."
-    );
-    if (verbose) dir(error);
-  }
 
-  //Output
-  globals.databus.updateChecker = {
-    txadmin: txOutput,
-    fxserver: fxsOutput,
-  };
+    //Output
+    globals.databus.updateChecker = {
+        txadmin: txOutput,
+        fxserver: fxsOutput,
+    };
 };
