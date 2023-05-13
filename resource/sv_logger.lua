@@ -1,10 +1,10 @@
+-- Prevent running in monitor mode
+if not TX_SERVER_MODE then return end
+
+
 -- =============================================
 --  Logger
 -- =============================================
---Check Environment
-if GetConvar('txAdminServerMode', 'false') ~= 'true' then
-    return
-end
 
 -- Micro optimization & variables
 local sub = string.sub
@@ -88,10 +88,10 @@ local function getLogPlayerName(src)
     end
 end
 
-AddEventHandler('txaLogger:menuEvent', function(source, event, allowed, data)
+AddEventHandler('txsv:logger:menuEvent', function(source, event, allowed, data)
     if not allowed then return end
     local message
-    
+
     --SELF menu options
     if event == 'playerModeChanged' then
         if data == 'godmode' then
@@ -192,7 +192,7 @@ AddEventHandler('txaLogger:menuEvent', function(source, event, allowed, data)
 end)
 
 -- Extra handlers
-RegisterNetEvent('txaLogger:DeathNotice', function(killer, cause)
+RegisterNetEvent('txsv:logger:deathEvent', function(killer, cause)
     local logData = {
         cause = cause,
         killer = killer
@@ -201,10 +201,12 @@ RegisterNetEvent('txaLogger:DeathNotice', function(killer, cause)
 end)
 
 --FIXME: deprecate or allow server commands
+--FIXME: didn't migrate to keep compatibility with external calls
 RegisterNetEvent('txaLogger:CommandExecuted', function(data)
     logger(source, 'CommandExecuted', data)
 end)
 
+--FIXME: didn't migrate to keep compatibility with external calls
 RegisterNetEvent('txaLogger:DebugMessage', function(data)
     logger(source, 'DebugMessage', data)
 end)
@@ -217,4 +219,4 @@ local function logChatMessage(src, author, text)
     logger(src, 'ChatMessage', logData)
 end
 RegisterNetEvent('chatMessage', logChatMessage)
-RegisterNetEvent('txaLogger:internalChatMessage', logChatMessage)
+AddEventHandler('txsv:logger:addChatMessage', logChatMessage)

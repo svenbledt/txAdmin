@@ -9,7 +9,7 @@
 		Join our Discord Server: &nbsp; <a href="https://discord.gg/AFAAXzq"><img src="https://discordapp.com/api/guilds/1078768675529707662/widget.png?style=shield"></img></a>
 	</h4>
 	<p align="center">
-		<b>txAdmin</b> is a <b>full featured</b> web panel to Manage & Monitor your FiveM/RedM Server remotely, in use by over <strong>18000</strong> servers worldwide at any given time.
+		<b>txAdmin</b> is a <b>full featured</b> web panel to Manage & Monitor your FiveM/RedM Server remotely, in use by over <strong>20.000</strong> servers worldwide at any given time.
 	</p>
 </p>
 
@@ -21,26 +21,26 @@
 - Start/Stop/Restart your server instance or resources
 - Server tick time performance chart ([example](https://i.imgur.com/VG8hpzr.gif))
 - Full-featured in-game admin menu:
-  - Player Mode: NoClip, God
-  - Teleport: waypoint, coords and back
-  - Vehicle: Spawn, Fix, Delete
-  - Heal: yourself, everyone
-  - Send Announcements
-  - Reset World Area
-  - Show player IDs
-  - Player search/sort by distance, ID, name
-  - Player interactions: Go To, Bring, Spectate, Freeze
-  - Player troll: make drunk, set fire, wild attack
-  - Player ban
+	- Player Mode: NoClip, God, SuperJump
+	- Teleport:  waypoint, coords and back
+	- Vehicle: Spawn, Fix, Delete, Boost
+	- Heal: yourself, everyone
+	- Send Announcements
+	- Reset World Area
+	- Show player IDs
+	- Player search/sort by distance, ID, name
+	- Player interactions: Go To, Bring, Spectate, Freeze
+	- Player troll: make drunk, set fire, wild attack
+	- Player ban
 - Access control:
   - Login via Password or CitizenFX
   - Admin permission system ([more info](docs/permissions.md))
   - Action logging
   - Brute-force protection
 - Discord Integration:
-  - Server status command (`/status`)
-  - Add to Whitelist command (`/addwl`)
-  - Command spam prevention
+	- Server configurable, persistent, auto-updated status embed
+	- Command to whitelist players
+	- Command to display player infos
 - Monitoring:
   - Auto Restart FXServer on crash
   - Server’s CPU/RAM consumption
@@ -48,19 +48,18 @@
   - Online players chart
   - Server Activity Log (connections/disconnections, kills, chat, explosions and [custom commands](docs/custom_serverlog.md))
 - Player Manager:
-  - [Warning system](https://www.youtube.com/watch?v=DeE0-5vtZ4E)
-  - Ban (temporary or permanently) system
-  - Whitelist system
-  - Take notes about players
-  - Keep track of player's play and session time
-  - Import bans from EasyAdmin, BanSQL, vMenu, vRP, el_bwh
-  - Self-contained player database with backup tool (no MySQL required!)
-  - Clean/Optimize the database by removing old players, or bans/warns/whitelists
+	- [Warning system](https://www.youtube.com/watch?v=DeE0-5vtZ4E)
+	- Ban (temporary or permanently) system
+	- Whitelist system (Discord member, Discord Role, Approved License, Admin-only)
+	- Take notes about players
+	- Keep track of player's play and session time
+	- Self-contained player database with backup tool (no MySQL required!)
+	- Clean/Optimize the database by removing old players, or bans/warns/whitelists
 - Real-time playerlist
 - Scheduled restarts with warning announcements and custom events ([more info](docs/events.md))
 - Translation Support ([more info](docs/translation.md))
 - FiveM's Server CFG editor & validator
-- Responsive web interface with Dark Mode 😎
+- Responsive(ish) web interface with Dark Mode 😎
 
 Also, check our [Feature Graveyard](docs/feature_graveyard.md) for the features that are no longer among us (RIP).
 
@@ -92,9 +91,10 @@ ConVar usage **example** for different port and profile:
 ./run.sh +set serverProfile dev_server +set txAdminPort 40121
 ```
 
-### Development
-
-If you want to run it from build & source, please do read [this](docs/development.md).
+### Contributing & Development
+- All PRs should be based on the develop branch, specially translation PRs.
+- Before putting effort for any significant PR, make sure to join our discord and talk to us, since the change you want to do might not have been done for a reason or there might be some required context.
+- If you want to run it from build & source, please do read [this](docs/development.md).
 
 ## License, Credits and Thanks
 

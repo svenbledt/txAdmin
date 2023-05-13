@@ -16,6 +16,7 @@ type QuantileArray = {
 - [x] how many scheduled restart times
 - [ ] drop zap/discord as login methods
 - [x] HWID: `count, q1, q25, q50, q75, q99`.
+- [ ] if they have enabled hide notifications
 */
 
 type RuntimeDataType = {
@@ -54,3 +55,5 @@ type RuntimeDataType = {
 }
 
 //FIXME: http counter > keep max counter only
+//FIXME: do i still need tmpHwidsCount?
+//FIXME: add ban search time QuantileArray

@@ -3,14 +3,14 @@ import { customAlphabet } from 'nanoid';
 import dict51 from 'nanoid-dictionary/nolookalikes'
 import got from '@core/extras/got.js';
 import consts from '@core/extras/consts';
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const nanoid = customAlphabet(dict51, 20);
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
 const citizenfxIDRegex = /^\w[\w.-]{1,18}\w$/;
-const discordIDRegex = /^\d{7,20}$/;
+const discordIDRegex = /^\d{17,20}$/;
 const nameRegex = citizenfxIDRegex;
 const nameRegexDesc = 'up to 18 characters containing only letters, numbers and the characters \`_.-\`';
 const dangerousPerms = ['all_permissions', 'manage.admins', 'console.write', 'settings.write'];
@@ -108,7 +108,7 @@ async function handleAdd(ctx) {
                 return ctx.send({type: 'danger', message: 'Invalid CitizenFX ID3'});
             }
         } catch (error) {
-            logError(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
+            console.error(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
         }
     }
 
@@ -203,7 +203,7 @@ async function handleEdit(ctx) {
                 return ctx.send({type: 'danger', message: '(ERR3) Invalid CitizenFX ID'});
             }
         } catch (error) {
-            logError(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
+            console.error(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
         }
     }
 

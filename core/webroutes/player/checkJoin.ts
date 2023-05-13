@@ -4,17 +4,16 @@ import { GenericApiError } from '@shared/genericApiTypes';
 import PlayerDatabase from '@core/components/PlayerDatabase';
 import { DatabaseActionType, DatabaseWhitelistApprovalsType } from '@core/components/PlayerDatabase/databaseTypes';
 import Translator from '@core/components/Translator';
-import logger, { ogConsole } from '@core/extras/console.js';
-import { anyUndefined, now, parsePlayerIds, PlayerIdsObjectType } from '@core/extras/helpers';
+import { anyUndefined, filterPlayerHwids, now, parsePlayerIds, PlayerIdsObjectType } from '@core/extras/helpers';
 import xssInstancer from '@core/extras/xss';
-import { verbose } from '@core/globalData';
 import playerResolver from '@core/playerLogic/playerResolver';
 import humanizeDuration, { Unit } from 'humanize-duration';
 import { Context } from 'koa';
 import DiscordBot from '@core/components/DiscordBot';
 import AdminVault from '@core/components/AdminVault';
 import FXRunner from '@core/components/FxRunner';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 const xss = xssInstancer();
 
 //Helper
@@ -83,31 +82,35 @@ export default async function PlayerCheckJoin(ctx: Context) {
         ctx.request.body,
         ctx.request.body.playerName,
         ctx.request.body.playerIds,
+        ctx.request.body.playerHwids,
     )) {
         return sendTypedResp({ error: 'Invalid request.' });
     }
-    const { playerName, playerIds } = ctx.request.body;
+    const { playerName, playerIds, playerHwids } = ctx.request.body;
 
     //DEBUG: save join log
     const toLog = {
         ts: Date.now(),
         playerName,
         playerIds,
+        playerHwids,
     };
     globals.databus.joinCheckHistory.push(toLog);
     if (globals.databus.joinCheckHistory.length > 25) globals.databus.joinCheckHistory.shift();
 
     //Validating body data
     if (typeof playerName !== 'string') return sendTypedResp({ error: 'playerName should be an string.' });
-    if (!Array.isArray(playerIds)) return sendTypedResp({ error: 'Identifiers should be an array.' });
+    if (!Array.isArray(playerIds)) return sendTypedResp({ error: 'playerIds should be an array.' });
     const { validIdsArray, validIdsObject } = parsePlayerIds(playerIds);
     if (validIdsArray.length < 1) return sendTypedResp({ error: 'Identifiers array must contain at least 1 valid identifier.' });
+    if (!Array.isArray(playerHwids)) return sendTypedResp({ error: 'playerHwids should be an array.' });
+    const { validHwidsArray } = filterPlayerHwids(playerHwids);
 
 
     try {
         // If ban checking enabled
         if (playerDatabase.config.onJoinCheckBan) {
-            const result = checkBan(validIdsArray);
+            const result = checkBan(validIdsArray, validIdsObject, validHwidsArray);
             if (!result.allow) return sendTypedResp(result);
         }
 
@@ -117,7 +120,7 @@ export default async function PlayerCheckJoin(ctx: Context) {
             if (!result.allow) return sendTypedResp(result);
 
         } else if (playerDatabase.config.whitelistMode === 'approvedLicense') {
-            const result = await checkApprovedLicense(validIdsArray, validIdsObject, playerName);
+            const result = await checkApprovedLicense(validIdsArray, validIdsObject, validHwidsArray, playerName);
             if (!result.allow) return sendTypedResp(result);
 
         } else if (playerDatabase.config.whitelistMode === 'guildMember') {
@@ -134,8 +137,8 @@ export default async function PlayerCheckJoin(ctx: Context) {
         return sendTypedResp({ allow: true });
     } catch (error) {
         const msg = `Failed to check ban/whitelist status: ${(error as Error).message}`;
-        logError(msg);
-        if (verbose) dir(error);
+        console.error(msg);
+        console.verbose.dir(error);
         return sendTypedResp({ error: msg });
     }
 };
@@ -144,7 +147,11 @@ export default async function PlayerCheckJoin(ctx: Context) {
 /**
  * Checks if the player is banned
  */
-function checkBan(validIdsArray: string[]): AllowRespType | DenyRespType {
+function checkBan(
+    validIdsArray: string[],
+    validIdsObject: PlayerIdsObjectType,
+    validHwidsArray: string[]
+): AllowRespType | DenyRespType {
     const playerDatabase = (globals.playerDatabase as PlayerDatabase);
     const translator = (globals.translator as Translator);
 
@@ -157,10 +164,11 @@ function checkBan(validIdsArray: string[]): AllowRespType | DenyRespType {
             && (!action.revocation.timestamp)
         );
     };
-    const activeBans = playerDatabase.getRegisteredActions(validIdsArray, filter);
+    const activeBans = playerDatabase.getRegisteredActions(validIdsArray, validHwidsArray, filter);
     if (activeBans.length) {
         const ban = activeBans[0];
 
+        //Translation keys
         const textKeys = {
             title_permanent: translator.t('ban_messages.reject.title_permanent'),
             title_temporary: translator.t('ban_messages.reject.title_temporary'),
@@ -170,9 +178,11 @@ function checkBan(validIdsArray: string[]): AllowRespType | DenyRespType {
             label_reason: translator.t('ban_messages.reject.label_reason'),
             label_id: translator.t('ban_messages.reject.label_id'),
             note_multiple_bans: translator.t('ban_messages.reject.note_multiple_bans'),
+            note_diff_license: translator.t('ban_messages.reject.note_diff_license'),
         };
         const language = translator.t('$meta.humanizer_language');
 
+        //Ban data
         let title;
         let expLine = '';
         if (ban.expiration) {
@@ -191,8 +201,18 @@ function checkBan(validIdsArray: string[]): AllowRespType | DenyRespType {
             translator.canonical,
             { dateStyle: 'medium', timeStyle: 'medium' }
         )
-        const note = (activeBans.length > 1) ? `<br>${textKeys.note_multiple_bans}` : '';
 
+        //Informational notes
+        let note = '';
+        if (activeBans.length > 1) {
+            note += `<br>${textKeys.note_multiple_bans}`;
+        }
+        const bannedLicense = ban.ids.find(id => id.startsWith('license:'));
+        if (bannedLicense && validIdsObject.license && bannedLicense.substring(8) !== validIdsObject.license) {
+            note += `<br>${textKeys.note_diff_license}`;
+        }
+
+        //Prepare rejection message
         const reason = rejectMessageTemplate(
             title,
             `${expLine}
@@ -381,6 +401,7 @@ async function checkGuildRoles(
 async function checkApprovedLicense(
     validIdsArray: string[],
     validIdsObject: PlayerIdsObjectType,
+    validHwidsArray: string[],
     playerName: string
 ): Promise<AllowRespType | DenyRespType> {
     const playerDatabase = (globals.playerDatabase as PlayerDatabase);
@@ -433,6 +454,7 @@ async function checkApprovedLicense(
             playerDatabase.registerPlayer({
                 license: validIdsObject.license,
                 ids: validIdsArray,
+                hwids: validHwidsArray,
                 displayName,
                 pureName,
                 playTime: 0,
