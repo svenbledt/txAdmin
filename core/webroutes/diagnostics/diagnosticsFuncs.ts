@@ -11,6 +11,8 @@ import WebServer from '@core/components/WebServer';
 import Logger from '@core/components/Logger';
 import si from 'systeminformation';
 import consoleFactory from '@extras/console';
+import StatisticsManager from '@core/components/StatisticsManager';
+import { QuantileArrayOutput } from '@core/components/StatisticsManager/statsUtils';
 const console = consoleFactory(modulename);
 
 
@@ -46,7 +48,7 @@ let hostStaticDataCache: HostStaticDataType;
 
 //Pre-calculate static data
 setTimeout(() => {
-    getHostData().catch();
+    getHostData().catch((e) => {});
 }, 10_000);
 
 
@@ -126,7 +128,9 @@ export const getFXServerData = async () => {
     const requestOptions = {
         url: `http://${fxRunner.fxServerHost}/info.json`,
         maxRedirects: 0,
-        timeout: healthMonitor.hardConfigs.timeout,
+        timeout: {
+            request: healthMonitor.hardConfigs.timeout
+        },
         retry: { limit: 0 },
     };
 
@@ -179,17 +183,28 @@ export const getFXServerData = async () => {
 export const getHostData = async (): Promise<HostDataReturnType> => {
     const healthMonitor = (globals.healthMonitor as HealthMonitor);
 
+    const tmpDurationDebugLog = (msg: string) => {
+        // @ts-expect-error
+        if(globals?.tmpSetHbDataTracking){
+            console.verbose.debug(`refreshHbData: ${msg}`);
+        }
+    }
+
     //Get and cache static information
+    tmpDurationDebugLog('started');
     if (!hostStaticDataCache) {
+        tmpDurationDebugLog('filling host static data cache');
         //This errors out on pterodactyl egg
         let osUsername = 'unknown';
         try {
             const userInfo = os.userInfo();
+            tmpDurationDebugLog('got userInfo');
             osUsername = userInfo.username;
         } catch (error) {}
 
         try {
             const cpuStats = await si.cpu();
+            tmpDurationDebugLog('got cpu');
             const cpuSpeed = cpuStats.speedMin || cpuStats.speed;
 
             //TODO: move this to frontend
@@ -216,6 +231,7 @@ export const getHostData = async (): Promise<HostDataReturnType> => {
                     clockWarning,
                 }
             }
+            tmpDurationDebugLog('finished');
         } catch (error) {
             console.error('Error getting Host static data.');
             console.verbose.dir(error);
@@ -252,35 +268,58 @@ export const getHostData = async (): Promise<HostDataReturnType> => {
 
 
 /**
+ * Gets the Host Static Data from cache.
+ */
+export const getHostStaticData = (): HostStaticDataType => {
+    if (!hostStaticDataCache) {
+        throw new Error(`hostStaticDataCache not yet ready`);
+    }
+    return hostStaticDataCache;
+}
+
+
+/**
  * Gets txAdmin Data
  */
 export const getTxAdminData = async () => {
     const fxRunner = (globals.fxRunner as FXRunner);
     const webServer = (globals.webServer as WebServer);
     const logger = (globals.logger as Logger);
-    const databus = (globals.databus as any);
+    const statisticsManager = (globals.statisticsManager as StatisticsManager);
 
     const humanizeOptions: HumanizerOptions = {
         round: true,
         units: ['d', 'h', 'm'],
     };
 
-    const httpCounter = databus.txStatsData.httpCounter;
+    const joinTimesToString = (res: QuantileArrayOutput) => {
+        let output = 'not enough data available';
+        if (!('notEnoughData' in res)){
+            const quantileTimes = [res.count.toString()];
+            for (const [key, val] of Object.entries(res)) {
+                if (key === 'count') continue;
+                quantileTimes.push(`${Math.ceil(val)}ms`);
+            }
+            output = quantileTimes.join(' / ');
+        }
+        return output;
+    }
+    const banCheckTime = joinTimesToString(statisticsManager.banCheckTime.result());
+    const whitelistCheckTime = joinTimesToString(statisticsManager.whitelistCheckTime.result());
+
     return {
         //Stats
         uptime: humanizeDuration(process.uptime() * 1000, humanizeOptions),
-        httpCounterLog: httpCounter.log.join(', ') || '--',
-        httpCounterMax: httpCounter.max || '--',
         monitorRestarts: {
-            close: databus.txStatsData.monitorStats.restartReasons.close,
-            heartBeat: databus.txStatsData.monitorStats.restartReasons.heartBeat,
-            healthCheck: databus.txStatsData.monitorStats.restartReasons.healthCheck,
+            close: statisticsManager.monitorStats.restartReasons.close,
+            heartBeat: statisticsManager.monitorStats.restartReasons.heartBeat,
+            healthCheck: statisticsManager.monitorStats.restartReasons.healthCheck,
         },
-        hbFD3Fails: databus.txStatsData.monitorStats.heartBeatStats.fd3Failed,
-        hbHTTPFails: databus.txStatsData.monitorStats.heartBeatStats.httpFailed,
-        hbBootSeconds: databus.txStatsData.monitorStats.bootSeconds.join(', ') || '--',
-        freezeSeconds: databus.txStatsData.monitorStats.freezeSeconds.join(', ') || '--',
+        hbFD3Fails: statisticsManager.monitorStats.healthIssues.fd3,
+        hbHTTPFails: statisticsManager.monitorStats.healthIssues.http,
         koaSessions: Object.keys(webServer.koaSessionMemoryStore.sessions).length || '--',
+        banCheckTime,
+        whitelistCheckTime,
 
         //Log stuff:
         logStorageSize: (await logger.getStorageSize()).total,

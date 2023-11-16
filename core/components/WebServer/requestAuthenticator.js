@@ -32,7 +32,7 @@ export const requestAuth = (epType) => {
             if (sessToken && (sessToken !== headerToken)) {
                 console.verbose.warn(`Invalid CSRF token: ${ctx.path}`, epType);
                 const msg = (headerToken)
-                    ? 'Error: Invalid CSRF token, please report this issue to the txAdmin developers.'
+                    ? 'Error: Invalid CSRF token, please refresh the page or try to login again.'
                     : 'Error: Missing HTTP header \'x-txadmin-csrftoken\'. This likely means your files are not updated or you are using some reverse proxy that is removing this header from the HTTP request.';
                 //to maintain compatibility with all routes
                 return ctx.send({
@@ -74,8 +74,8 @@ export const requestAuth = (epType) => {
                         // go through authLogic() which sets them up
                     };
                     ctx.utils.logAction('logged in from via NUI iframe');
-                    globals.databus.txStatsData.login.origins.webpipe++;
-                    globals.databus.txStatsData.login.methods.iframe++;
+                    globals?.statisticsManager.loginOrigins.count('webpipe');
+                    globals?.statisticsManager.loginMethods.count('iframe');
                     await next();
                 }
             } else {
@@ -222,7 +222,7 @@ const nuiAuthLogic = (reqIP, reqHeader) => {
     try {
         const admin = globals.adminVault.getAdminByIdentifiers(identifiers);
         if (!admin) {
-            console.verbose.warn(`NUI Auth Failed: no admin found with identifiers ${JSON.stringify(identifiers)}.`);
+            // console.verbose.warn(`NUI Auth Failed: no admin found with identifiers ${JSON.stringify(identifiers)}.`);
             return { isValidAuth: false, rejectReason: 'admin_not_found' };
         }
         return { isValidAuth: true, admin };

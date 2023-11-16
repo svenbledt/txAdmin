@@ -331,7 +331,7 @@ export default class AdminVault {
 
         //Saving admin file
         this.admins.push(admin);
-        this.refreshOnlineAdmins().catch();
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -388,7 +388,7 @@ export default class AdminVault {
         if (typeof permissions !== 'undefined') this.admins[adminIndex].permissions = permissions;
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch();
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             await this.writeAdminsFile();
             return (password !== null) ? this.admins[adminIndex].password_hash : true;
@@ -423,7 +423,7 @@ export default class AdminVault {
         this.admins[adminIndex].providers[provider].data = providerData;
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch();
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -453,7 +453,7 @@ export default class AdminVault {
         if (!found) throw new Error('Admin not found');
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch();
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -474,11 +474,12 @@ export default class AdminVault {
         const callError = (reason) => {
             console.error(`Unable to load admins.json: ${reason}`);
             if (reason === 'cannot read file') {
-                console.error('This means the admin file `txData/admins.json` doesn\'t exist or txAdmin doesn\'t have permission to read it.');
+                console.error('This means the file  doesn\'t exist or txAdmin doesn\'t have permission to read it.');
             } else {
                 console.error('This likely means the file got somehow corrupted.');
                 console.error('You can rey restoring it or you can delete it and let txAdmin create a new one.');
             }
+            console.error(`Admin File Path: ${this.adminsFile}`);
             process.exit(1);
         };
 
@@ -537,7 +538,7 @@ export default class AdminVault {
         }
 
         this.admins = jsonData;
-        this.refreshOnlineAdmins().catch();
+        this.refreshOnlineAdmins().catch((e) => {});
         if (migrated) {
             try {
                 await this.writeAdminsFile();

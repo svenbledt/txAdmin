@@ -53,6 +53,7 @@ const printDiagnostics = async () => {
     console.error(`txAdmin: ${txEnv.txAdminVersion}`);
     console.error(`FXServer: ${txEnv.fxServerVersion}`);
     console.error(`ZAP: ${convars.isZapHosting}`);
+    console.error(`Pterodactyl: ${convars.isPterodactyl}`);
     console.error(`Unique Test: secure ${secureStorage.size}/100, non-secure ${nonsecureStorage.size}/100`);
 };
 
@@ -80,7 +81,6 @@ export const genWhitelistRequestID = (storage: IdStorageTypes) => {
     let attempts = 0;
     while (attempts < maxAttempts) {
         attempts++;
-        if (attempts > 5) globals.databus.txStatsData.randIDFailures++;
         const randFunc = (attempts <= 5) ? nanoidSecure : nanoidNonSecure;
         const id = 'R' + randFunc.customAlphabet(consts.noLookAlikesAlphabet, 4)();
         if (checkUniqueness(storage, id, 'whitelistRequests')) {
@@ -88,7 +88,7 @@ export const genWhitelistRequestID = (storage: IdStorageTypes) => {
         }
     }
 
-    printDiagnostics().catch();
+    printDiagnostics().catch((e) => {});
     throw new Error(noIdErrorMessage);
 };
 
@@ -99,7 +99,6 @@ export const genActionID = (storage: IdStorageTypes, actionType: string) => {
     let attempts = 0;
     while (attempts < maxAttempts) {
         attempts++;
-        if (attempts > 5) globals.databus.txStatsData.randIDFailures++;
         const randFunc = (attempts <= 5) ? nanoidSecure : nanoidNonSecure;
         const id = actionType[0].toUpperCase()
             + randFunc.customAlphabet(consts.noLookAlikesAlphabet, 3)()
@@ -110,6 +109,6 @@ export const genActionID = (storage: IdStorageTypes, actionType: string) => {
         }
     }
 
-    printDiagnostics().catch();
+    printDiagnostics().catch((e) => {});
     throw new Error(noIdErrorMessage);
 };

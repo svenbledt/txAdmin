@@ -47,6 +47,7 @@ export default async (txAdmin: TxAdmin, interaction: Interaction) => {
         //     console.error(`No handler available for button interaction ${interaction.customId}`);
         //     return;
         // }
+        // txAdmin.statisticsManager.botCommands.count(???);
         // //Executes interaction
         // try {
         //     return await handler.execute(interaction, args, txChungus);
@@ -60,9 +61,10 @@ export default async (txAdmin: TxAdmin, interaction: Interaction) => {
         //Get interaction
         const handler = handlers[interaction.commandName as keyof typeof handlers];
         if (!handler) {
-            noHandlerResponse(interaction).catch();
+            noHandlerResponse(interaction).catch((e) => {});
             return;
         }
+        txAdmin.statisticsManager.botCommands.count(interaction.commandName);
 
         //Executes interaction
         try {
@@ -77,5 +79,5 @@ export default async (txAdmin: TxAdmin, interaction: Interaction) => {
     }
 
     //Unknown type
-    noHandlerResponse(interaction).catch();
+    noHandlerResponse(interaction).catch((e) => {});
 };

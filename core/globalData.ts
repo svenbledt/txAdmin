@@ -60,6 +60,7 @@ const resourceName = GetCurrentResourceName();
 //4574 = add resource field to PRINT_STRUCTURED_TRACE
 //5894 = CREATE_VEHICLE_SERVER_SETTER
 //6185 = added ScanResourceRoot (not yet in use)
+//6508 = unhandledRejection is now handlable, we need this due to discord.js's bug
 const minFXServerVersion = 5894;
 const fxServerVersion = getBuild(getConvarString('version'));
 if (fxServerVersion === 9999) {
@@ -134,17 +135,25 @@ const debugExternalSource = getConvarString('txDebugExternalSource');
 
 
 /**
- * Convars - ZAP dependant
+ * Host type check
  */
 //Checking for ZAP Configuration file
 const zapCfgFile = path.join(dataPath, 'txAdminZapConfig.json');
-let zapCfgData, isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, defaultMasterAccount, deployerDefaults;
+let isZapHosting: boolean;
+let forceInterface;
+let forceFXServerPort;
+let txAdminPort;
+let loginPageLogo;
+let defaultMasterAccount;
+let deployerDefaults;
 const loopbackInterfaces = ['::1', '127.0.0.1', '127.0.1.1'];
+const isPterodactyl = !isWindows && process.env?.TXADMIN_ENABLE === '1';
 if (fs.existsSync(zapCfgFile)) {
+    isZapHosting = !isPterodactyl;
     console.log('Loading ZAP-Hosting configuration file.');
+    let zapCfgData;
     try {
         zapCfgData = JSON.parse(fs.readFileSync(zapCfgFile, 'utf8'));
-        isZapHosting = true;
         forceInterface = zapCfgData.interface;
         forceFXServerPort = zapCfgData.fxServerPort;
         txAdminPort = zapCfgData.txAdminPort;
@@ -197,7 +206,7 @@ if (fs.existsSync(zapCfgFile)) {
     }
 }
 if (verboseConvar) {
-    console.dir({ isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, deployerDefaults });
+    console.dir({ isPterodactyl, isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, deployerDefaults });
 }
 
 //Setting the variables in console without it having to importing from here (cyclical dependency)
@@ -227,6 +236,7 @@ export const convars = Object.freeze({
     debugPlayerlistGenerator,
     debugExternalSource,
     //Convars - zap dependant
+    isPterodactyl,
     isZapHosting,
     forceInterface,
     forceFXServerPort,

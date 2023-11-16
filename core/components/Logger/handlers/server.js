@@ -210,8 +210,9 @@ export default class ServerLogger extends LoggerBase {
                 : 'Debug Message: unknown';
 
         } else if (eventData.type === 'MenuEvent') {
-            eventMessage = (typeof eventData.data === 'string')
-                ? `${eventData.data}`
+            globals?.statisticsManager.menuCommands.count(eventData.data?.action ?? 'unknown');
+            eventMessage = (typeof eventData.data.message === 'string')
+                ? `${eventData.data.message}`
                 : 'did unknown action';
 
         } else if (eventData.type !== 'playerJoining') {

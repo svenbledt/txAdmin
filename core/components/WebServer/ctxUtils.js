@@ -43,6 +43,9 @@ const RESOURCE_PATH = 'nui://monitor/web/public/';
 const THEME_DARK = 'theme--dark';
 const DEFAULT_AVATAR = 'img/default_avatar.png';
 
+const displayFxserverVersionPrefix = convars.isZapHosting && '/ZAP' || convars.isPterodactyl && '/Ptero' || '';
+const displayFxserverVersion = `${txEnv.fxServerVersion}${displayFxserverVersionPrefix}`;
+
 function getEjsOptions(filePath) {
     const webTemplateRoot = path.resolve(txEnv.txAdminResourcePath, 'web');
     const webCacheDir = path.resolve(txEnv.txAdminResourcePath, 'web-cache', filePath);
@@ -128,7 +131,7 @@ async function renderLoginView(data, txVars) {
     try {
         out = await loadWebTemplate('standalone/login').then(template => template(data));
     } catch (error) {
-        console.error(error);
+        console.dir(error);
         out = getRenderErrorText('Login', error, data);
     }
 
@@ -168,6 +171,9 @@ function logAction(ctx, action) {
 function hasPermission(ctx, perm) {
     try {
         const sess = ctx.nuiSession ?? ctx.session;
+        if (perm === 'master') {
+            return sess.auth.master === true;
+        }
         return (
             sess.auth.master === true
             || sess.auth.permissions.includes('all_permissions')
@@ -249,27 +255,25 @@ export default async function WebCtxUtils(ctx, next) {
     ctx.utils = {};
     ctx.utils.render = async (view, data) => {
         //Usage stats
-        if (!globals.databus.txStatsData.pageViews[view]) {
-            globals.databus.txStatsData.pageViews[view] = 1;
-        } else {
-            globals.databus.txStatsData.pageViews[view]++;
-        }
+        globals?.statisticsManager.pageViews.count(view);
 
         // Setting up default render data:
         const baseViewData = {
-            isWebInterface: isWebInterface,
+            isWebInterface,
             basePath: (isWebInterface) ? '/' : WEBPIPE_PATH,
             resourcePath: (isWebInterface) ? '' : RESOURCE_PATH,
             serverProfile: globals.info.serverProfile,
             serverName: globals.config.serverName || globals.info.serverProfile,
             uiTheme: (ctx.cookies.get('txAdmin-darkMode') === 'true' || !isWebInterface) ? THEME_DARK : '',
-            fxServerVersion: (convars.isZapHosting) ? `${txEnv.fxServerVersion}/ZAP` : txEnv.fxServerVersion,
+            fxServerVersion: displayFxserverVersion,
             txAdminVersion: txEnv.txAdminVersion,
-            txaOutdated: globals.databus.updateChecker?.txadmin,
-            fxsOutdated: globals.databus.updateChecker?.fxserver,
+            txaOutdated: globals.updateChecker?.txUpdateData,
+            fxsOutdated: globals.updateChecker?.fxsUpdateData,
             jsInjection: getJavascriptConsts({
+                isZapHosting: convars.isZapHosting, //not in use
+                isPterodactyl: convars.isPterodactyl, //not in use
+                isWebInterface,
                 csrfToken: (ctx.session?.auth?.csrfToken) ? ctx.session.auth.csrfToken : 'not_set',
-                isWebInterface: isWebInterface,
                 TX_BASE_PATH: (isWebInterface) ? '' : WEBPIPE_PATH,
                 PAGE_TITLE: data?.headerTitle ?? 'txAdmin',
             }),

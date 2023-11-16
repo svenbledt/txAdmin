@@ -16,13 +16,15 @@ import FxRunner from '@core/components/FxRunner';
 import Logger from '@core/components/Logger';
 import HealthMonitor from '@core/components/HealthMonitor';
 import Scheduler from '@core/components/Scheduler';
-import StatsCollector from '@core/components/StatsCollector';
+import StatisticsManager from '@core/components/StatisticsManager';
+import PerformanceCollector from '@core/components/PerformanceCollector';
 import Translator from '@core/components/Translator';
 import WebServer from '@core/components/WebServer';
 import ResourcesManager from '@core/components/ResourcesManager';
 import PlayerlistManager from '@core/components/PlayerlistManager';
 import PlayerDatabase from '@core/components/PlayerDatabase';
 import PersistentCache from '@core/components/PersistentCache';
+import UpdateChecker from '@core/components/UpdateChecker';
 
 import consoleFactory from '@extras/console';
 const console = consoleFactory(`v${txEnv.txAdminVersion}`);
@@ -44,7 +46,8 @@ const globalsInternal: Record<string, any> = {
     dynamicAds: null,
     healthMonitor: null,
     scheduler: null,
-    statsCollector: null,
+    statisticsManager: null,
+    performanceCollector: null,
     translator: null,
     webServer: null,
     resourcesManager: null,
@@ -52,63 +55,12 @@ const globalsInternal: Record<string, any> = {
     playerDatabase: null,
     config: null,
     deployer: null,
+    updateChecker: null,
     info: {},
 
     //FIXME: settings:save webroute cannot call txAdmin.refreshConfig for now
     //so this hack allows it to call it
     func_txAdminRefreshConfig: ()=>{},
-
-    //NOTE: still not ideal, but since the extensions system changed entirely,
-    //      will have to rethink the plans for this variable.
-    databus: {
-        //internal
-        resourcesList: null,
-        updateChecker: null,
-        joinCheckHistory: [],
-
-        //stats
-        txStatsData: {
-            playerDBStats: null,
-            lastFD3Error: '',
-            monitorStats: {
-                heartBeatStats: {
-                    httpFailed: 0,
-                    fd3Failed: 0,
-                },
-                restartReasons: {
-                    close: 0,
-                    heartBeat: 0,
-                    healthCheck: 0,
-                },
-                bootSeconds: [],
-                freezeSeconds: [],
-            },
-            randIDFailures: 0,
-            pageViews: {},
-            httpCounter: {
-                current: 0,
-                max: 0,
-                log: [],
-            },
-            login: {
-                origins: {
-                    localhost: 0,
-                    cfxre: 0,
-                    ip: 0,
-                    other: 0,
-                    webpipe: 0,
-                },
-                methods: {
-                    discord: 0,
-                    citizenfx: 0,
-                    password: 0,
-                    zap: 0,
-                    nui: 0,
-                    iframe: 0,
-                },
-            },
-        },
-    },
 };
 
 //@ts-ignore: yes i know this is wrong
@@ -128,12 +80,14 @@ export default class TxAdmin {
     dynamicAds;
     healthMonitor;
     scheduler;
-    statsCollector;
+    statisticsManager;
+    performanceCollector;
     webServer;
     resourcesManager;
     playerlistManager;
     playerDatabase;
     persistentCache;
+    updateChecker;
 
     //Runtime
     readonly info: {
@@ -146,6 +100,11 @@ export default class TxAdmin {
         menuEnabled: boolean,
         menuAlignRight: boolean,
         menuPageKey: string,
+
+        hideDefaultAnnouncement: boolean,
+        hideDefaultDirectMessage: boolean,
+        hideDefaultWarning: boolean,
+        hideDefaultScheduledRestartWarning: boolean,
     }
     
 
@@ -220,8 +179,11 @@ export default class TxAdmin {
             this.scheduler = new Scheduler(profileConfig.monitor); //NOTE same opts as monitor, for now
             globalsInternal.scheduler = this.scheduler;
 
-            this.statsCollector = new StatsCollector();
-            globalsInternal.statsCollector = this.statsCollector;
+            this.statisticsManager = new StatisticsManager(this);
+            globalsInternal.statisticsManager = this.statisticsManager;
+
+            this.performanceCollector = new PerformanceCollector();
+            globalsInternal.performanceCollector = this.performanceCollector;
 
             this.webServer = new WebServer(this, profileConfig.webServer);
             globalsInternal.webServer = this.webServer;
@@ -237,6 +199,9 @@ export default class TxAdmin {
 
             this.persistentCache = new PersistentCache(this);
             globalsInternal.persistentCache = this.persistentCache;
+
+            this.updateChecker = new UpdateChecker();
+            globalsInternal.updateChecker = this.updateChecker;
         } catch (error) {
             console.error(`Error starting main components:`);
             console.dir(error);
@@ -249,12 +214,6 @@ export default class TxAdmin {
         } catch (error) {
             console.dir(error);
         }
-
-        //Run Update Checker every 15 minutes
-        updateChecker();
-        setInterval(updateChecker, 15 * 60 * 1000);
-
-        //TODO: cron to update setTTYTitle
     }
 
     /**
